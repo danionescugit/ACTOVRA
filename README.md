@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CommercePilot
+
+CommercePilot is an AI-assisted commerce operations system demonstrating a core loop:
+Opportunity → CommerceDecision → deterministic policy/risk gate → human approval → PayPal Sandbox transaction → webhook/outcome → next action → Commerce Operations Console.
+
+This is a hackathon demo project. It uses synthetic/demo data only and does not integrate with any proprietary systems.
+
+## Architecture Principle
+
+The important demo is NOT “AI can call PayPal”.
+
+The important demo is:
+AI identifies/composes a commercial action
+→ deterministic controls make it safe
+→ human approves it
+→ PayPal executes it
+→ the resulting commerce event becomes context for the next decision.
 
 ## Getting Started
 
-First, run the development server:
+First, install the dependencies:
+
+```bash
+npm install
+```
+
+Then, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Running Tests
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+To run the unit tests with Vitest:
 
-## Learn More
+```bash
+npm test
+```
 
-To learn more about Next.js, take a look at the following resources:
+For watch mode:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run test:watch
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Environment Variables
 
-## Deploy on Vercel
+Create a `.env.local` file in the root directory (based on `.env.example`) and fill in the required values.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Important:** Never commit real credentials to version control. The `.env.example` file contains only variable names.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Required environment variables for PayPal Sandbox:
+- `PAYPAL_CLIENT_ID`
+- `PAYPAL_CLIENT_SECRET`
+- `PAYPAL_API_BASE` (defaults to `https://api-m.sandbox.paypal.com`)
+
+## Project Structure
+
+- `src/domain`: Zod schemas and TypeScript types for domain objects, synthetic data.
+- `src/policy`: Deterministic policy/gate functions (to be implemented).
+- `src/agents`: AI commerce agent that proposes decisions (to be implemented).
+- `src/services`: PayPal service and other external integrations (to be implemented).
+- `src/store`: In-memory storage for demo state (to be implemented).
+- `src/components`: React components, including the operations console (to be implemented).
+- `app`: Next.js App Router pages.
+
+## License
+
+This project is open-source and available under the MIT License.
