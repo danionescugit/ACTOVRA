@@ -1,25 +1,11 @@
-import { DatabaseSync } from 'node:sqlite';
+import Database from 'better-sqlite3';
+import { existsSync, mkdirSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 
 /**
  * SQLite infrastructure for the commerce operations store.
  *
- * Design notes (from the Task 06 architecture benchmark):
- * - The `commerce_operations` table persists an event-sourced snapshot of each
- *   CommerceOperation. The snapshot is the authoritative replayed state, stored
- *   as JSON so future `applyOperationEvent` can update it atomically alongside
- *   the appended audit row.
- * - The `commerce_operation_audit` table is the operation-local, append-only
- *   event log. Each row carries the event payload as JSON, its per-operation
- *   sequence number (`event_seq`), and the timestamp the event occurred.
- * - The audit table has an FK to `commerce_operations` WITHOUT ON DELETE
- *   CASCADE: audit rows must never disappear just because an operation row was
- *   deleted. Referential integrity is enforced, deletion is not propagated.
- * - `UNIQUE (operation_id, event_seq)` makes the audit sequence per-operation
- *   and is the concurrency guard a future atomic `applyOperationEvent`
- *   (INSERT audit row + UPDATE snapshot in a single transaction) relies on:
- *   two writers racing for the same event_seq cannot both succeed.
- *
- * Zero npm dependencies: uses Node's built-in `node:sqlite` (DatabaseSync).
+ * Uses `better-sqlite3` native synchronous bindings for robust file/memory SQLite.
  */
 
 /** Default busy timeout in milliseconds. Allows writers to wait on locks. */
@@ -51,6 +37,18 @@ CREATE INDEX IF NOT EXISTS idx_commerce_operation_audit_operation_id
   ON commerce_operation_audit (operation_id, event_seq);
 `;
 
+export interface SqliteStatement {
+  get(...params: unknown[]): unknown;
+  all(...params: unknown[]): unknown[];
+  run(...params: unknown[]): { changes: number | bigint; lastInsertRowid: number | bigint };
+}
+
+export interface SqliteDb {
+  exec(sql: string): void;
+  prepare(sql: string): SqliteStatement;
+  close(): void;
+}
+
 export interface StoreDbOptions {
   /**
    * Path to the database file, or ':memory:' for an isolated in-memory
@@ -62,8 +60,8 @@ export interface StoreDbOptions {
 }
 
 export interface StoreDb {
-  /** The underlying node:sqlite database handle. */
-  readonly db: DatabaseSync;
+  /** The underlying database handle. */
+  readonly db: SqliteDb;
   /** True when the database is file-backed (not ':memory:'). */
   readonly isFileBacked: boolean;
   /** Close the database handle. */
@@ -83,8 +81,15 @@ export function openStoreDb(options: StoreDbOptions | string): StoreDb {
 
   const isFileBacked = path !== ':memory:';
 
-  const db = new DatabaseSync(path, {
-    enableForeignKeyConstraints: true,
+  if (isFileBacked) {
+    const parentDir = dirname(resolve(path));
+    if (!existsSync(parentDir)) {
+      mkdirSync(parentDir, { recursive: true });
+    }
+  }
+
+  const db = new Database(path, {
+    timeout: Math.max(0, Math.floor(busyTimeoutMs)),
   });
 
   // Enforce referential integrity (per-connection in SQLite).
@@ -97,7 +102,6 @@ export function openStoreDb(options: StoreDbOptions | string): StoreDb {
   }
 
   // Wait up to busyTimeoutMs for a conflicting lock instead of failing fast.
-  // This applies to both memory and file-backed databases.
   db.exec(`PRAGMA busy_timeout = ${Math.max(0, Math.floor(busyTimeoutMs))};`);
 
   initializeSchema(db);
@@ -112,12 +116,12 @@ export function openStoreDb(options: StoreDbOptions | string): StoreDb {
 }
 
 /** Initialize the two conceptual tables (idempotent). */
-function initializeSchema(db: DatabaseSync): void {
+function initializeSchema(db: SqliteDb): void {
   db.exec(SCHEMA_SQL);
 }
 
 /** Read a PRAGMA value as a number (e.g. foreign_keys, busy_timeout). */
-export function getPragmaNumber(db: DatabaseSync, pragma: string): number {
+export function getPragmaNumber(db: SqliteDb, pragma: string): number {
   const row = db.prepare(`PRAGMA ${pragma};`).get() as Record<string, unknown> | undefined;
   if (!row) return 0;
   const value = Object.values(row)[0];
@@ -125,13 +129,13 @@ export function getPragmaNumber(db: DatabaseSync, pragma: string): number {
 }
 
 /** Read the journal mode of the database. */
-export function getJournalMode(db: DatabaseSync): string {
+export function getJournalMode(db: SqliteDb): string {
   const row = db.prepare('PRAGMA journal_mode;').get() as Record<string, unknown> | undefined;
   return row ? String(Object.values(row)[0]) : 'unknown';
 }
 
 /** List table names in the database (excluding SQLite internals). */
-export function listTables(db: DatabaseSync): string[] {
+export function listTables(db: SqliteDb): string[] {
   const rows = db.prepare(
     "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name;"
   ).all() as Array<Record<string, unknown>>;

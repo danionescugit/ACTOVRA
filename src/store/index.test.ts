@@ -1,11 +1,10 @@
 import { describe, test, expect, afterEach } from 'vitest';
-import { DatabaseSync } from 'node:sqlite';
 import {
   CommerceOperationStore,
   StoreCorruptionError,
   type CommerceOperationStoreOptions,
 } from './index';
-import { openStoreDb, type StoreDb } from './db';
+import { openStoreDb, type StoreDb, type SqliteDb } from './db';
 import type { CommerceOperationEvent } from '../domain/events';
 import {
   CommerceOperationEventSchema,
@@ -19,13 +18,13 @@ import {
 
 const createdStores: StoreDb[] = [];
 
-function makeDb(): DatabaseSync {
+function makeDb(): SqliteDb {
   const store = openStoreDb(':memory:');
   createdStores.push(store);
   return store.db;
 }
 
-function makeStore(): { store: CommerceOperationStore; db: DatabaseSync } {
+function makeStore(): { store: CommerceOperationStore; db: SqliteDb } {
   const db = makeDb();
   return { store: new CommerceOperationStore({ db }), db };
 }
@@ -69,7 +68,7 @@ function driveToAwaitingApproval(
 }
 
 /** Raw row counts straight from SQLite (bypasses the store API for assertions). */
-function rawCounts(db: DatabaseSync): { operations: number; audit: number } {
+function rawCounts(db: SqliteDb): { operations: number; audit: number } {
   const operations = (
     db.prepare('SELECT COUNT(*) AS n FROM commerce_operations;').get() as { n: number }
   ).n;
@@ -80,7 +79,7 @@ function rawCounts(db: DatabaseSync): { operations: number; audit: number } {
 }
 
 /** Raw event_type values in event_seq order, read straight from SQLite. */
-function rawAuditEventTypes(db: DatabaseSync, operationId: string): string[] {
+function rawAuditEventTypes(db: SqliteDb, operationId: string): string[] {
   return (
     db
       .prepare(
@@ -91,7 +90,7 @@ function rawAuditEventTypes(db: DatabaseSync, operationId: string): string[] {
 }
 
 /** Overwrite the persisted snapshot JSON for an operation (corruption helper). */
-function corruptSnapshot(db: DatabaseSync, operationId: string, snapshotJson: string): void {
+function corruptSnapshot(db: SqliteDb, operationId: string, snapshotJson: string): void {
   db.prepare('UPDATE commerce_operations SET snapshot = ? WHERE id = ?;').run(
     snapshotJson,
     operationId
@@ -100,7 +99,7 @@ function corruptSnapshot(db: DatabaseSync, operationId: string, snapshotJson: st
 
 /** Overwrite the raw audit JSON of an operation's n-th event (1-based). */
 function corruptAuditJson(
-  db: DatabaseSync,
+  db: SqliteDb,
   operationId: string,
   eventSeq: number,
   eventJson: string

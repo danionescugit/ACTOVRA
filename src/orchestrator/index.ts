@@ -11,6 +11,7 @@ export {
 export type {
   PayPalOrderCreator,
   PayPalOrderCreatorResult,
+  PayPalApprovalRedirect,
   CommerceExecutionClock,
   CommerceExecutionOutcome,
   CommerceExecutionOrchestratorOptions,

@@ -93,7 +93,13 @@ export interface PayPalCreateOrderResult {
   readonly paypalOrderId: string;
   readonly status: string;
   readonly environment: PayPalEnvironment;
-  /** Buyer-approval redirect URL, when PayPal returns one (approval flow). */
+  /**
+   * Buyer-approval redirect URL, when PayPal returns one (approval flow).
+   * Normalized from the HATEOAS link whose rel is either "approve" (the
+   * standard buyer-approval link) or "payer-action" (observed live when
+   * experience_context user_action is PAY_NOW); "approve" is preferred when
+   * both are present. Absent when PayPal returns neither.
+   */
   readonly approveUrl?: string;
   /** Echoed caller request ID for traceability. */
   readonly requestId: string;
@@ -605,15 +611,31 @@ export class PayPalService {
       );
     }
 
+    // Normalize the buyer-approval redirect URL. PayPal's HATEOAS links
+    // observed live for the redirect approval flow use rel "approve"
+    // (standard) or "payer-action" (returned instead of "approve" when
+    // experience_context user_action is PAY_NOW — see Task 09 E1 evidence).
+    // Both refer to the buyer-approval redirect, so both are surfaced through
+    // the existing approveUrl field; "approve" wins when both are present.
+    // When PayPal returns neither, approveUrl stays absent (CP2-A gap fix:
+    // a payer-action-only response is no longer silently dropped).
     const approveRel = parsedOrder.data.links?.find(
       (link) => link.rel === 'approve'
     );
+    const payerActionRel =
+      approveRel === undefined
+        ? parsedOrder.data.links?.find((link) => link.rel === 'payer-action')
+        : undefined;
 
     return {
       paypalOrderId: parsedOrder.data.id,
       status: parsedOrder.data.status,
       environment: this.#config.environment,
-      ...(approveRel !== undefined ? { approveUrl: approveRel.href } : {}),
+      ...(approveRel !== undefined
+        ? { approveUrl: approveRel.href }
+        : payerActionRel !== undefined
+          ? { approveUrl: payerActionRel.href }
+          : {}),
       requestId: input.requestId,
     };
   }

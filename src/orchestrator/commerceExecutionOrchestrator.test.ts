@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, test } from 'vitest';
-import { DatabaseSync } from 'node:sqlite';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import type { CommerceOperation } from '../domain/schemas';
 import { CommerceOperationStore } from '../store';
-import { openStoreDb, type StoreDb } from '../store/db';
+import { openStoreDb, type StoreDb, type SqliteDb } from '../store/db';
 import {
   PayPalHttpApiError,
   PayPalInvalidRequestError,
@@ -26,8 +28,9 @@ import {
 /* ------------------------------------------------------------------ */
 
 const createdClosables: Array<{ close(): void }> = [];
+const createdDirs: string[] = [];
 
-function makeStore(): { store: CommerceOperationStore; db: DatabaseSync } {
+function makeStore(): { store: CommerceOperationStore; db: SqliteDb } {
   const storeDb: StoreDb = openStoreDb(':memory:');
   createdClosables.push(storeDb);
   return { store: new CommerceOperationStore({ db: storeDb.db }), db: storeDb.db };
@@ -49,7 +52,7 @@ function makeClock(): () => Date {
 }
 
 /** Raw audit event_type values in event_seq order, straight from SQLite. */
-function rawAuditEventTypes(db: DatabaseSync, operationId: string): string[] {
+function rawAuditEventTypes(db: SqliteDb, operationId: string): string[] {
   return (
     db
       .prepare(
@@ -231,6 +234,13 @@ afterEach(() => {
       closable.close();
     } catch {
       // already closed
+    }
+  }
+  for (const dir of createdDirs.splice(0)) {
+    try {
+      fs.rmSync(dir, { recursive: true, force: true });
+    } catch {
+      // ignore
     }
   }
 });
@@ -781,17 +791,16 @@ describe('double invocation protection (tests 13–14)', () => {
   test('14. concurrent double invocation across two store connections → exactly one claim, one createOrder, one PAYPAL_ORDER_CREATED', async () => {
     // A named shared-cache in-memory SQLite database: two REAL connections,
     // so BEGIN IMMEDIATE writer serialization is genuine (no test double).
-    const dbName = `orch-conc-${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
-    const uri = `file:${dbName}?mode=memory&cache=shared`;
-    const storeDbA = openStoreDb(uri);
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'orch-conc-'));
+    createdDirs.push(dir);
+    const dbFile = path.join(dir, 'conc.db');
+    const storeDbA = openStoreDb(dbFile);
     createdClosables.push(storeDbA);
-    const dbB = new DatabaseSync(uri);
-    dbB.exec('PRAGMA foreign_keys = ON;');
-    dbB.exec('PRAGMA busy_timeout = 2000;');
-    createdClosables.push(dbB);
+    const storeDbB = openStoreDb({ path: dbFile, busyTimeoutMs: 2000 });
+    createdClosables.push(storeDbB);
 
     const storeA = new CommerceOperationStore({ db: storeDbA.db });
-    const storeB = new CommerceOperationStore({ db: dbB });
+    const storeB = new CommerceOperationStore({ db: storeDbB.db });
     driveToApproved(storeA, 'op-1');
 
     const paypalA = new FakePayPal();
@@ -1015,3 +1024,109 @@ describe('PayPal boundary integration surface (supporting)', () => {
 /* 16. CP2 regression guard is covered by src/store + src/domain tests */
 /* (see package test run; no duplication here)                         */
 /* ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ */
+/* Task 10 CP2 (B). Buyer-redirect approval pass-through.              */
+/* The orchestrator forwards approvalRedirect VERBATIM into createOrder*/
+/* and never invents, validates, or normalizes the values. Offline.    */
+/* ------------------------------------------------------------------ */
+
+const CP2_RETURN_URL = 'https://commercepilot.example/paypal/return';
+const CP2_CANCEL_URL = 'https://commercepilot.example/paypal/cancel';
+
+describe('approval-redirect pass-through (Task 10 CP2 B)', () => {
+  test('B1. approvalRedirect is forwarded VERBATIM as returnUrl/cancelUrl into createOrder', async () => {
+    const { store } = makeStore();
+    const paypal = new FakePayPal();
+    const orchestrator = new CommerceExecutionOrchestrator({
+      store,
+      paypal,
+      approvalRedirect: { returnUrl: CP2_RETURN_URL, cancelUrl: CP2_CANCEL_URL },
+      now: makeClock(),
+    });
+    driveToApproved(store);
+
+    const outcome = await orchestrator.executeApprovedOperation('op-1');
+
+    expect(outcome.kind).toBe('ORDER_CREATED');
+    expect(paypal.calls).toEqual([
+      {
+        requestId: 'commercepilot-op-op-1',
+        amountMinorUnits: 2500,
+        currency: 'EUR',
+        commerceOperationId: 'op-1',
+        returnUrl: CP2_RETURN_URL, // verbatim — exactly as configured
+        cancelUrl: CP2_CANCEL_URL, // verbatim — exactly as configured
+      },
+    ]);
+  });
+
+  test('B2. without approvalRedirect the createOrder input is unchanged (no returnUrl/cancelUrl keys)', async () => {
+    const { store } = makeStore();
+    const paypal = new FakePayPal();
+    const orchestrator = makeOrchestrator(store, paypal);
+    driveToApproved(store);
+
+    await orchestrator.executeApprovedOperation('op-1');
+
+    expect(paypal.calls.length).toBe(1);
+    expect('returnUrl' in paypal.calls[0]).toBe(false);
+    expect('cancelUrl' in paypal.calls[0]).toBe(false);
+    // Byte-identical to the pre-CP2 contract.
+    expect(paypal.calls[0]).toEqual({
+      requestId: 'commercepilot-op-op-1',
+      amountMinorUnits: 2500,
+      currency: 'EUR',
+      commerceOperationId: 'op-1',
+    });
+  });
+
+  test('B3. deterministic requestId/amount/currency/commerceOperationId are unchanged by the redirect option', async () => {
+    const { store } = makeStore();
+    const paypal = new FakePayPal();
+    const orchestrator = new CommerceExecutionOrchestrator({
+      store,
+      paypal,
+      approvalRedirect: { returnUrl: CP2_RETURN_URL, cancelUrl: CP2_CANCEL_URL },
+      now: makeClock(),
+    });
+    driveToApproved(store);
+
+    await orchestrator.executeApprovedOperation('op-1');
+
+    const input = paypal.calls[0];
+    expect(input.requestId).toBe('commercepilot-op-op-1');
+    expect(input.amountMinorUnits).toBe(2500);
+    expect(input.currency).toBe('EUR');
+    expect(input.commerceOperationId).toBe('op-1');
+    // Success persistence is unchanged too: PayPal result normalized exactly
+    // as before, with the deterministic requestId echoed.
+    expect(store.getOperation('op-1')?.paypalOrder).toEqual({
+      paypalOrderId: 'PAYPAL-ORDER-1',
+      paypalStatus: 'CREATED',
+      requestId: 'commercepilot-op-op-1',
+      approveUrl: 'https://paypal.example/approve/PAYPAL-ORDER-1',
+    });
+  });
+
+  test('B4. pass-through only: values are NOT validated or rewritten by the orchestrator', async () => {
+    // Validation (HTTPS-only pairing) belongs exclusively to the PayPal
+    // boundary. The orchestrator must forward even a hypothetically invalid
+    // value untouched — proving zero normalization logic here. The injected
+    // fake records it verbatim (no real PayPal call is possible offline).
+    const { store } = makeStore();
+    const paypal = new FakePayPal();
+    const orchestrator = new CommerceExecutionOrchestrator({
+      store,
+      paypal,
+      approvalRedirect: { returnUrl: 'http://not-https.example/return', cancelUrl: CP2_CANCEL_URL },
+      now: makeClock(),
+    });
+    driveToApproved(store);
+
+    await orchestrator.executeApprovedOperation('op-1');
+
+    expect(paypal.calls[0].returnUrl).toBe('http://not-https.example/return');
+    expect(paypal.calls[0].cancelUrl).toBe(CP2_CANCEL_URL);
+  });
+});

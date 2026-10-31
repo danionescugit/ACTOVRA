@@ -1,12 +1,11 @@
 import { afterEach, describe, expect, test } from 'vitest';
-import { DatabaseSync } from 'node:sqlite';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import type { CommerceOperation } from '../domain/schemas';
 import type { CommerceOperationEvent } from '../domain/events';
 import { CommerceOperationStore, type AppliedOperationEvent } from '../store';
-import { openStoreDb, type StoreDb } from '../store/db';
+import { openStoreDb, type StoreDb, type SqliteDb } from '../store/db';
 import {
   PayPalAuthenticationError,
   PayPalConfigurationError,
@@ -37,7 +36,7 @@ import {
 const createdClosables: Array<{ close(): void }> = [];
 const tempDirs: string[] = [];
 
-function makeStore(): { store: CommerceOperationStore; db: DatabaseSync } {
+function makeStore(): { store: CommerceOperationStore; db: SqliteDb } {
   const storeDb = openStoreDb(':memory:');
   createdClosables.push(storeDb);
   return { store: new CommerceOperationStore({ db: storeDb.db }), db: storeDb.db };
@@ -95,7 +94,7 @@ function makeClock(times: Date[] = [T6, T7]): () => Date {
 }
 
 /** Raw audit event_type values in event_seq order, straight from SQLite. */
-function rawAuditEventTypes(db: DatabaseSync, operationId: string): string[] {
+function rawAuditEventTypes(db: SqliteDb, operationId: string): string[] {
   return (
     db
       .prepare(
@@ -172,7 +171,7 @@ function driveToCaptureExecuting(store: CommerceOperationStore, operationId = OP
  */
 function injectRawStatus(
   store: CommerceOperationStore,
-  db: DatabaseSync,
+  db: SqliteDb,
   status: string,
   snapshotExtras: Record<string, unknown> = {}
 ): void {

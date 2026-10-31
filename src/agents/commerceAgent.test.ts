@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { CommerceAgent } from './commerceAgent';
 import { LLMProvider } from './provider';
-import { CommerceDecisionSchema, type CommerceDecision } from '../domain/schemas';
+import { CommerceDecisionSchema } from '../domain/schemas';
 
 // Mock LLM provider for testing
 class MockLLMProvider implements LLMProvider {
@@ -30,22 +30,25 @@ describe('CommerceAgent', () => {
 
   describe('proposeDecision', () => {
     it('should return a valid CommerceDecision when provider returns valid JSON', async () => {
-      const validDecision: CommerceDecision = {
+      const mockDecision = {
         opportunityId: 'opp-001',
-        action: 'CREATE_PAYMENT',
+        action: 'CREATE_PAYMENT' as const,
         amount: 1000, // $10.00 in cents
-        currency: 'USD',
+        currency: 'USD' as const,
         recipient: 'customer-123',
         justification: 'Test justification',
       };
-      const mockProvider = new MockLLMProvider(JSON.stringify(validDecision));
+      const mockProvider = new MockLLMProvider(JSON.stringify(mockDecision));
       const agent = new CommerceAgent(mockProvider);
 
       const result = await agent.proposeDecision(opportunityId, businessContext);
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.decision).toEqual(validDecision);
+        expect(result.decision).toEqual({
+          ...mockDecision,
+          provenance: 'REAL_AI',
+        });
         // Additional validation: ensure it passes Zod schema
         const parsed = CommerceDecisionSchema.safeParse(result.decision);
         expect(parsed.success).toBe(true);

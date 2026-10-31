@@ -1,4 +1,4 @@
-import { DatabaseSync, type StatementSync } from 'node:sqlite';
+import type { SqliteDb, SqliteStatement } from './db';
 import { CommerceOperationSchema, type CommerceOperation } from '../domain/schemas';
 import {
   CommerceOperationEventSchema,
@@ -162,8 +162,8 @@ export interface AppliedOperationEvent {
 }
 
 export interface CommerceOperationStoreOptions {
-  /** The node:sqlite database handle (from `openStoreDb(path).db`). */
-  readonly db: DatabaseSync;
+  /** The sqlite database handle (from `openStoreDb(path).db`). */
+  readonly db: SqliteDb;
 }
 
 function assertValidTimestamp(timestamp: Date, context: string): void {
@@ -187,18 +187,18 @@ function validateEvent(
 /**
  * Durable store for commerce operations. Production callers receive only the
  * typed API below — no raw database access, no arbitrary mutation or delete.
- * Tests may construct their own `DatabaseSync` (e.g. ':memory:') and inject it
+ * Tests may construct their own database handle (e.g. ':memory:') and inject it
  * via `new CommerceOperationStore({ db })` together with `openStoreDb(...)`.
  */
 export class CommerceOperationStore {
-  #db: DatabaseSync;
-  #insertOperationStmt: StatementSync;
-  #updateOperationStmt: StatementSync;
-  #maxEventSeqStmt: StatementSync;
-  #insertAuditStmt: StatementSync;
-  #getOperationStmt: StatementSync;
-  #listOperationsStmt: StatementSync;
-  #listAuditStmt: StatementSync;
+  #db: SqliteDb;
+  #insertOperationStmt: SqliteStatement;
+  #updateOperationStmt: SqliteStatement;
+  #maxEventSeqStmt: SqliteStatement;
+  #insertAuditStmt: SqliteStatement;
+  #getOperationStmt: SqliteStatement;
+  #listOperationsStmt: SqliteStatement;
+  #listAuditStmt: SqliteStatement;
 
   constructor(options: CommerceOperationStoreOptions) {
     this.#db = options.db;

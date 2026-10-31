@@ -625,6 +625,126 @@ describe('create-order redirect approval flow (CP5A2 FIX)', () => {
 });
 
 /* ------------------------------------------------------------------ */
+/* Task 10 CP2 (A). Payer-action link normalization.                   */
+/* Live evidence (Task 09 E1): with experience_context user_action     */
+/* PAY_NOW, PayPal can return rel "payer-action" INSTEAD of "approve". */
+/* Both carry the buyer-approval redirect URL; a payer-action-only     */
+/* response must no longer be silently dropped. Offline tests only.    */
+/* ------------------------------------------------------------------ */
+
+/** Create-order response body with only the given HATEOAS links. */
+function orderResponseWithLinks(
+  links: Array<{ rel: string; href: string; method?: string }>
+): Record<string, unknown> {
+  return { id: 'ORDER-PA-1', status: 'CREATED', links };
+}
+
+function happyMockWithOrderResponse(orderResponse: Record<string, unknown>): { mock: MockFetch; service: PayPalService } {
+  const mock = new MockFetch();
+  mock.queueResponse(okJson(TOKEN_RESPONSE), okJson(orderResponse));
+  return { mock, service: makeService(mock) };
+}
+
+describe('create-order approve/payer-action normalization (Task 10 CP2 A)', () => {
+  it('normalizes a payer-action-only response into approveUrl (CP2-A gap fix)', async () => {
+    // Exact live-observed shape from Task 09 E1: rel "payer-action",
+    // NO rel "approve" — previously the URL was silently dropped.
+    const { service } = happyMockWithOrderResponse(
+      orderResponseWithLinks([
+        {
+          rel: 'self',
+          href: 'https://api-m.sandbox.paypal.com/v2/checkout/orders/ORDER-PA-1',
+          method: 'GET',
+        },
+        {
+          rel: 'payer-action',
+          href: 'https://www.sandbox.paypal.com/checkoutnow?token=ORDER-PA-1',
+          method: 'GET',
+        },
+      ])
+    );
+    const result = await service.createOrder({
+      requestId: 'req-cp2a-001',
+      amountMinorUnits: 100,
+      currency: 'USD',
+      returnUrl: HTTPS_RETURN_URL,
+      cancelUrl: HTTPS_CANCEL_URL,
+    });
+
+    expect(result.approveUrl).toBe('https://www.sandbox.paypal.com/checkoutnow?token=ORDER-PA-1');
+    // Everything else is unchanged.
+    expect(result).toEqual({
+      paypalOrderId: 'ORDER-PA-1',
+      status: 'CREATED',
+      environment: 'SANDBOX',
+      approveUrl: 'https://www.sandbox.paypal.com/checkoutnow?token=ORDER-PA-1',
+      requestId: 'req-cp2a-001',
+    });
+  });
+
+  it('prefers the approve link when both approve and payer-action are present', async () => {
+    const { service } = happyMockWithOrderResponse(
+      orderResponseWithLinks([
+        { rel: 'approve', href: 'https://paypal.example/approve/ORDER-PA-1', method: 'GET' },
+        { rel: 'payer-action', href: 'https://paypal.example/payer-action/ORDER-PA-1', method: 'GET' },
+      ])
+    );
+    const result = await service.createOrder({
+      requestId: 'req-cp2a-002',
+      amountMinorUnits: 100,
+      currency: 'USD',
+    });
+    expect(result.approveUrl).toBe('https://paypal.example/approve/ORDER-PA-1');
+  });
+
+  it('still surfaces a plain approve-only response unchanged (backward compatible)', async () => {
+    const { service } = happyMockWithOrderResponse(
+      orderResponseWithLinks([
+        { rel: 'approve', href: 'https://paypal.example/approve/ORDER-PA-1', method: 'GET' },
+      ])
+    );
+    const result = await service.createOrder({
+      requestId: 'req-cp2a-003',
+      amountMinorUnits: 100,
+      currency: 'USD',
+    });
+    expect(result.approveUrl).toBe('https://paypal.example/approve/ORDER-PA-1');
+  });
+
+  it('leaves approveUrl absent when neither link is present (unchanged behavior)', async () => {
+    const { service } = happyMockWithOrderResponse(
+      orderResponseWithLinks([
+        { rel: 'self', href: 'https://paypal.example/orders/ORDER-PA-1', method: 'GET' },
+      ])
+    );
+    const result = await service.createOrder({
+      requestId: 'req-cp2a-004',
+      amountMinorUnits: 100,
+      currency: 'USD',
+    });
+    expect(result.approveUrl).toBeUndefined();
+    expect('approveUrl' in result).toBe(false);
+  });
+
+  it('ignores unrelated link rels and does not let them become approveUrl', async () => {
+    const { service } = happyMockWithOrderResponse(
+      orderResponseWithLinks([
+        { rel: 'update', href: 'https://paypal.example/update/ORDER-PA-1', method: 'PATCH' },
+        { rel: 'capture', href: 'https://paypal.example/capture/ORDER-PA-1', method: 'POST' },
+      ])
+    );
+    const result = await service.createOrder({
+      requestId: 'req-cp2a-005',
+      amountMinorUnits: 100,
+      currency: 'USD',
+    });
+    expect(result.approveUrl).toBeUndefined();
+    expect(result.status).toBe('CREATED');
+    expect(result.paypalOrderId).toBe('ORDER-PA-1');
+  });
+});
+
+/* ------------------------------------------------------------------ */
 /* J/K. Create-order error handling                                    */
 /* ------------------------------------------------------------------ */
 

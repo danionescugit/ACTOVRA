@@ -16,6 +16,8 @@ export const CommerceDecisionSchema = z.object({
   currency: z.enum(['USD', 'EUR', 'GBP', 'JPY', 'CAD']), // Extend as needed
   recipient: z.string(), // e.g., customer ID, email, etc.
   justification: z.string(),
+  // Provenance flag distinguishing live model vs synthetic fallback
+  provenance: z.enum(['REAL_AI', 'SYNTHETIC_FALLBACK']).optional(),
   // Add any other fields that the policy gate might need
 });
 

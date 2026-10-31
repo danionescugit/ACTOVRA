@@ -30,6 +30,11 @@
  *   persistPayPalOrderOutcome() — which never calls PayPal.
  * - No retries, no capture, no webhooks, no UI/API wiring, no reconciliation
  *   subsystem. No secrets in persisted or returned errors.
+ * - Optional buyer-redirect approval flow (Task 10 CP2-B): an approvalRedirect
+ *   option is forwarded VERBATIM into createOrder() returnUrl/cancelUrl.
+ *   The orchestrator never invents or validates these (the PayPal boundary
+ *   validates HTTPS-only pairing); with the option absent, requests are
+ *   byte-identical to before (backward compatible).
  */
 
 import type {
@@ -65,6 +70,17 @@ export interface PayPalOrderCreator {
 
 /** Normalized successful create-order result (PayPalService shape). */
 export type PayPalOrderCreatorResult = PayPalCreateOrderResult;
+
+/**
+ * Buyer-redirect approval flow configuration for executeApprovedOperation().
+ * Pure pass-through: forwarded VERBATIM into PayPal createOrder()'s
+ * returnUrl/cancelUrl (which are validated there — HTTPS-only, paired).
+ * The orchestrator never invents, defaults, or normalizes these values.
+ */
+export interface PayPalApprovalRedirect {
+  readonly returnUrl: string;
+  readonly cancelUrl: string;
+}
 
 export type CommerceExecutionClock = () => Date;
 
@@ -142,6 +158,13 @@ export interface CommerceExecutionOrchestratorOptions {
   >;
   /** PayPal execution boundary (PayPalService or a test fake). */
   readonly paypal: PayPalOrderCreator;
+  /**
+   * Optional buyer-redirect approval flow. When present, BOTH fields are
+   * forwarded verbatim to PayPal createOrder() as returnUrl/cancelUrl;
+   * when absent, the create-order request is unchanged (server-driven flow).
+   * Validation (pairing, HTTPS-only) happens inside the PayPal boundary.
+   */
+  readonly approvalRedirect?: PayPalApprovalRedirect;
   /** Injectable clock for deterministic tests. Defaults to () => new Date(). */
   readonly now?: CommerceExecutionClock;
 }
@@ -226,11 +249,13 @@ const DEFAULT_NOW: CommerceExecutionClock = () => new Date();
 export class CommerceExecutionOrchestrator {
   readonly #store: CommerceExecutionOrchestratorOptions['store'];
   readonly #paypal: PayPalOrderCreator;
+  readonly #approvalRedirect: PayPalApprovalRedirect | undefined;
   readonly #now: CommerceExecutionClock;
 
   constructor(options: CommerceExecutionOrchestratorOptions) {
     this.#store = options.store;
     this.#paypal = options.paypal;
+    this.#approvalRedirect = options.approvalRedirect;
     this.#now = options.now ?? DEFAULT_NOW;
   }
 
@@ -324,6 +349,12 @@ export class CommerceExecutionOrchestrator {
       amountMinorUnits: decision.amount,
       currency: decision.currency as PayPalSupportedCurrency,
       commerceOperationId: operationId,
+      ...(this.#approvalRedirect !== undefined
+        ? {
+            returnUrl: this.#approvalRedirect.returnUrl,
+            cancelUrl: this.#approvalRedirect.cancelUrl,
+          }
+        : {}),
     };
     let paypalResult: PayPalOrderCreatorResult;
     try {

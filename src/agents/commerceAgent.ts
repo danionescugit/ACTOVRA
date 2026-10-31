@@ -74,7 +74,13 @@ export class CommerceAgent {
       // Parse and validate the response
       const decision = this.validateAndParseResponse(rawResponse, opportunityId);
 
-      return { success: true, decision };
+      return {
+        success: true,
+        decision: {
+          ...decision,
+          provenance: 'REAL_AI',
+        },
+      };
     } catch (error) {
       if (error instanceof ProviderError || error instanceof ValidationError || error instanceof ConfigurationError) {
         return { success: false, error };
@@ -134,7 +140,12 @@ Your output will be validated by a deterministic policy engine that decides whet
   private validateAndParseResponse(rawResponse: string, expectedOpportunityId: string): CommerceDecision {
     let parsed: unknown;
     try {
-      parsed = JSON.parse(rawResponse);
+      let cleaned = rawResponse.trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleaned = jsonMatch[0];
+      }
+      parsed = JSON.parse(cleaned);
     } catch {
       throw new ValidationError(
         `Failed to parse LLM response as JSON: ${rawResponse.substring(0, 100)}...`
@@ -172,7 +183,7 @@ Your output will be validated by a deterministic policy engine that decides whet
   static createWithNVIDIAFromEnv(): CommerceAgent {
     const apiKey = process.env.NVIDIA_API_KEY;
     const apiBase = process.env.NVIDIA_API_BASE || 'https://integrate.api.nvidia.com/v1';
-    const model = process.env.NVIDIA_MODEL || 'nvidia/nemotron-3-super-120b-a12b';
+    const model = process.env.NVIDIA_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b';
 
     if (!apiKey) {
       throw new ConfigurationError(
