@@ -42,7 +42,7 @@ export function RecentPayPalExecutionCard({ className }: RecentPayPalExecutionCa
       <div className={styles.paypalProofStatsRow}>
         <div className={styles.paypalProofPrimary}>
           <span className={styles.paypalProofAmount}>$2.00 USD</span>
-          <span className={styles.paypalProofRecipients}>2 recipients</span>
+          <span className={styles.paypalProofRecipients}>2 payout items</span>
         </div>
 
         <div className={styles.paypalProofReconSummary}>
@@ -72,7 +72,7 @@ export function RecentPayPalExecutionCard({ className }: RecentPayPalExecutionCa
         <div>
           <strong>Sandbox integration proof · Separate from the 917-payee demo batch</strong>
           <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
-            Proves live multi-recipient PayPal Sandbox Payouts API settlement and item-level reconciliation.
+            Proves live multi-item PayPal Sandbox Payouts API settlement and item-level reconciliation.
             Ready Batch #1 ($140,594.47) and 17 exceptions are offline demonstration models.
           </div>
         </div>

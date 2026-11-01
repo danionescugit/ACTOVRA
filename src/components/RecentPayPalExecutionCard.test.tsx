@@ -18,7 +18,7 @@ describe('RecentPayPalExecutionCard (PAYOUT-07 Judge-Facing Execution Proof)', (
 
     // Financial Metrics
     expect(screen.getByText('$2.00 USD')).toBeTruthy();
-    expect(screen.getByText('2 recipients')).toBeTruthy();
+    expect(screen.getByText('2 payout items')).toBeTruthy();
 
     // Reconciliation Breakdown
     expect(screen.getByText('✓ 2 completed')).toBeTruthy();

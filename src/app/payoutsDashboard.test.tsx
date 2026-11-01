@@ -229,7 +229,7 @@ describe('ACTOVRA Payout Intelligence Dashboard (UX-05 Final Product UI)', () =>
     expect(screen.getByText('Recent PayPal Execution')).toBeTruthy();
     expect(screen.getByText('SANDBOX · INTEGRATION PROOF')).toBeTruthy();
     expect(screen.getByText('$2.00 USD')).toBeTruthy();
-    expect(screen.getByText('2 recipients')).toBeTruthy();
+    expect(screen.getByText('2 payout items')).toBeTruthy();
     expect(screen.getByText('✓ 2 completed')).toBeTruthy();
     expect(screen.getByText('0 pending')).toBeTruthy();
     expect(screen.getByText('0 failed')).toBeTruthy();
