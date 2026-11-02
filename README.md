@@ -46,7 +46,7 @@ AI is deployed strictly where it excels—**contextual interpretation and unstru
 
 ## 3. Hero Use Case: Payout Intelligence for Mass Disbursements
 
-ACTOVRA is purpose-built for commercial platforms managing high-velocity multi-recipient payouts:
+ACTOVRA is purpose-built for commercial platforms managing high-velocity mass disbursements:
 - **Affiliate Networks:** Monthly commission runs with complex clawbacks, refund deductions, and volume adjustments.
 - **Creator Marketplaces:** Ad revenue and sponsorship shares subject to sudden viral traffic surges.
 - **Digital Seller Platforms:** Multi-vendor marketplace settlements with balance thresholds and rolling reserves.
@@ -220,7 +220,7 @@ flowchart TD
 
 ### Demo & Video Production Tools *(Separated from Product Runtime)*
 - **Demo Recording Automation:** Playwright (headless browser capture)
-- **Video Assembly & Color Grading:** FFmpeg 6.1 (1080p60 H.264)
+- **Video Assembly & Color Grading:** FFmpeg 6.1 (1080p / 25 fps H.264)
 - **Demo Narration:** Synthesized out-of-band via Google Gemini 2.5 Pro TTS (Algieba voice). *Gemini TTS is strictly a multimedia production tool and is not part of the ACTOVRA product runtime.*
 - **Soundtrack:** "Future Finance Today" by higheruniversalman (Pixabay).
 
