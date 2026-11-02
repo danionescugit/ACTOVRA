@@ -58,5 +58,21 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Continue environment (contains secrets)
-.continue/.env
+# Continue environment & local AI caches
+.continue/
+
+# Demo recordings & large media artifacts
+/tools/demo-recording/recordings/
+/tools/demo-recording/final-voice/*.wav
+/tools/demo-recording/voice-auditions/*.wav
+/tools/demo-recording/voice-auditions/*.mp3
+/tools/demo-recording/presentation/music/*.mp3
+/tools/demo-recording/node_modules/
+*.mp4
+*.webm
+*.wav
+*.mp3
+
+# Python build artifacts
+__pycache__/
+*.pyc
