@@ -11,6 +11,10 @@
 [![PayPal: Sandbox Payouts](https://img.shields.io/badge/PayPal-Sandbox%20Payouts-003087.svg)]()
 [![NVIDIA NIM: Nemotron 3.5](https://img.shields.io/badge/NVIDIA%20NIM-Nemotron%203.5-76B900.svg)]()
 
+> **Submission Links:**  
+> - 🚀 **Live Demo:** [https://commercepilot.toolspacehub.com](https://commercepilot.toolspacehub.com)  
+> - 📺 **Video Walkthrough (2:45):** [https://www.youtube.com/watch?v=P8j8gczBPA4](https://www.youtube.com/watch?v=P8j8gczBPA4)
+
 ---
 
 ## 1. The Problem
