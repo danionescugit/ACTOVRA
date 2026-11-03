@@ -203,7 +203,7 @@ flowchart TD
 ## 11. Technology Stack
 
 ### Product Architecture & Runtime
-- **Application Framework:** Next.js 16.4.0 (App Router, Turbopack)
+- **Application Framework:** Next.js 16.4.1 (App Router, Turbopack)
 - **UI & State:** React 19.3.0, CSS Modules, Responsive Enterprise Viewports
 - **Type Safety & Schemas:** TypeScript 5, Zod 4.6.5
 - **Local Persistence & Ledger:** SQLite (`better-sqlite3` 13.0.3) with WAL journaling

@@ -9,7 +9,7 @@ ACTOVRA does not claim ownership of any third-party libraries, dependencies, or 
 ## 1. Direct Runtime Dependencies
 
 ### Next.js
-- **Package:** `next` (v16.4.0)
+- **Package:** `next` (v16.4.1)
 - **Copyright:** (c) 2026 Vercel, Inc.
 - **License:** MIT License
 - **Notice:** Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software.
@@ -45,7 +45,7 @@ ACTOVRA does not claim ownership of any third-party libraries, dependencies, or 
 - **Vitest & Coverage:** `vitest` (v5.0.3), `@vitest/coverage-v8` (v5.0.3) — MIT License (c) 2021-Present Anthony Fu, Matias Capeletto and Vitest contributors.
 - **Testing Library:** `@testing-library/react` (v16.3.3) — MIT License (c) 2017 Kent C. Dodds.
 - **JSDOM:** `jsdom` (v29.1.1) — MIT License (c) 2010 Elijah Hamovitz.
-- **ESLint & Config:** `eslint` (v9.39.5), `eslint-config-next` (v16.4.0) — MIT License (c) OpenJS Foundation and other contributors / Vercel, Inc.
+- **ESLint & Config:** `eslint` (v9.39.5), `eslint-config-next` (v16.4.1) — MIT License (c) OpenJS Foundation and other contributors / Vercel, Inc.
 
 ---
 

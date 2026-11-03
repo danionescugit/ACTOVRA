@@ -148,7 +148,7 @@ Root `README.md` was rewritten as an 18-section, judge-facing architectural and 
 | **Next.js Production Build** | `npm run build` | **PASS** | Compiled successfully in 196ms, 8/8 routes generated |
 
 > [!NOTE]
-> During initial clean build, Next.js Turbopack showed a security upgrade recommendation advisory for Next.js 16.4.0. In accordance with strict REPO-01 rules prohibiting broad dependency upgrades or core Next.js upgrades before release review, Next.js was kept stable at 16.4.0. The build completes with exit code 0.
+> Next.js security advisory for v16.4.0 (GHSA-2464-fhr4-w9xw, GHSA-p3m5-59mp-jv5r, GHSA-673q-mjm6-r5xr) was cleanly resolved via minimal stable patch to Next.js 16.4.1 (Task SECURITY-01). Production build compiles with zero security warnings and exit code 0.
 
 ---
 
