@@ -81,8 +81,8 @@ Every Git object in repository history (207 historical commit, tree, and blob ob
 
 ## 6. Open-Source Licensing
 
-- **License Added:** Canonical MIT License created at `LICENSE`.
-- **Copyright:** Copyright (c) 2026 ACTOVRA Contributors.
+- **Open-Source License:** Canonical GNU AGPLv3 created at `LICENSE` (SPDX: `AGPL-3.0-or-later`).
+- **Copyright:** Copyright (C) 2026 Dan Ionescu.
 - **Dependency License Compatibility:**
   - **Direct Runtime Dependencies:**
     - `better-sqlite3`: MIT
@@ -115,7 +115,7 @@ Root `README.md` was rewritten as an 18-section, judge-facing architectural and 
 14. Production Build Instructions (`npm run build`)
 15. Truthfulness Invariants & Submission Integrity
 16. Security & Safe AI Disclosures
-17. Repository License (MIT)
+18. License & Commercial Inquiries (AGPL-3.0-or-later)
 18. Acknowledgments (PayPal & NVIDIA)
 
 - **Verdict:** **PASS**

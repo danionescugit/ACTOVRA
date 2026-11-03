@@ -6,7 +6,7 @@
 > **Core Thesis:** AI needs a mandate, not a blank check.
 
 [![Tests](https://img.shields.io/badge/tests-539%20passed-brightgreen.svg)]()
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: AGPL-3.0-or-later](https://img.shields.io/badge/License-AGPL%203.0--or--later-blue.svg)](LICENSE)
 [![Runtime: Node 24](https://img.shields.io/badge/node-24-blue.svg)]()
 [![PayPal: Sandbox Payouts](https://img.shields.io/badge/PayPal-Sandbox%20Payouts-003087.svg)]()
 [![NVIDIA NIM: Nemotron 3.5](https://img.shields.io/badge/NVIDIA%20NIM-Nemotron%203.5-76B900.svg)]()
@@ -326,6 +326,18 @@ The production application is deployed and live at:
 
 ---
 
-## 18. License
+## 18. License & Commercial Inquiries
 
-This project is licensed under the [MIT License](LICENSE).
+ACTOVRA is open-source software licensed under the **GNU Affero General Public License Version 3 or later** ([AGPL-3.0-or-later](LICENSE)).
+
+Users are free to run, study, modify, and redistribute the project under the terms of the GNU AGPLv3. Under the AGPL, if you modify ACTOVRA and run it over a computer network to provide services to users, you must make the corresponding source code available under the same license terms.
+
+### Commercial & Enterprise Inquiries
+Organizations seeking to incorporate ACTOVRA-owned code into proprietary or closed-source products and services without complying with the applicable AGPL copyleft obligations may contact the copyright holder regarding a separate commercial license. 
+
+- **Commercial Licensing Document:** See [`COMMERCIAL_LICENSE.md`](COMMERCIAL_LICENSE.md) for licensing structure details.
+- **Inquiries:** Contact `contact@toolspacehub.com` with licensing details. Commercial terms are negotiated separately by the copyright holder and are not automatically granted.
+- **Third-Party Upstream Software:** A commercial license from the copyright holder covers only ACTOVRA-owned source code. Third-party dependencies and assets remain governed by their respective upstream open-source licenses (see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)).
+
+### Hackathon Evaluation
+This repository is provided publicly for PayPal AI Hackathon judging under its stated open-source license and the applicable hackathon rules.
